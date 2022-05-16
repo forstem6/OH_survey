@@ -1,0 +1,207 @@
+---
+title: "Analysis OneHealth Questionnaire"
+author: "Michael Forster, QQE"
+date: "09. 05. 2022"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r includes, include=FALSE}
+library(summarytools)
+
+# Changing the standard output of dfsummary to Q1 - Q3 instead of IQR
+st_options(
+  dfSummary.custom.1 = 
+    expression(
+      paste(
+        "Q1 - Q3 :",
+        round(
+          quantile(column_data, probs = .25, type = 2, 
+                   names = FALSE, na.rm = TRUE), digits = 1
+        ), " - ",
+        round(
+          quantile(column_data, probs = .75, type = 2, 
+                   names = FALSE, na.rm = TRUE), digits = 1
+        )
+      )
+    )
+)
+```
+
+```{r import_prep, include=FALSE}
+source("preprocessing_data.R")
+```
+
+## Intro
+
+Quick overview over the results of the OneHealth survey. 
+
+The survey was active between 17.02.2022 and 31.03.2022. As the exact number of people, who might be the target population for the survey, was unclear, all scientific personnel of the university has been invited to participate (N = ~750). 
+In total, `r nrow(res_raw)` scientists opened in the survey, of those **`r nrow(res_2)`** gave at least one response.  
+
+Below there is a table containing all questions and a quick overview over the main descriptive statistics. I also left the open-ended questions in the table for a better overview (especially the "other" fields, where participants specified not-listed response options). To gain more insights into the different responses to all open-ended questions, the respective responses are listed again below in separate tables. 
+
+## Summary table
+
+The first variable indicates where the participants stopped answering the survey. As shown, 115 participants completed the survey and 28 quit at/after the first page, but still answering at least one question. All results have all participants who answered the respective questions included, resulting in a varying number of missing values. This however also means the "missing" column does not distinguish between participants having quit the survey before the question and participants explicitly not answering the question. 
+
+```{r dfsummary, results='asis', echo=FALSE, warning=FALSE, message=FALSE}
+# Make a tabular summary of the results with dfSummary()
+
+# First exclude ID, Comments and contact.
+res_numeric <- select(res_2, -c("id", "G02Q14", "G08Q18"))
+res_num <- dfSummary(res_numeric,
+                     valid.col       = FALSE,
+                     headings = FALSE,
+                     style        = "grid",
+                     max.distinct.values = 15,
+                     plain.ascii  = FALSE,
+                     graph.magnif = 0.85,
+                     tmp.img.dir = "./img")
+
+# Now change the variable names to understand the questions.
+# For this we first need to get rid of the slashes.
+res_num$Variable <-  str_sub(res_num$Variable , start= 1, end = str_locate(res_num$Variable ,"\\\\")[,1]-1)
+
+
+# Then we recode the values with the varnames from our lut_cols df (the code below has been created with CLIPR copy/paste and multiline editing (alt key))
+res_num$Variable <- recode(res_num$Variable, 
+                           "lastpage" = "Last page",
+                           "G01Q01[SQ001]" = "1. How familiar are you\n with the concept of One Health?",
+                           "G01Q02" = "2. Are you aware that the\n Vetmeduni importantly promotes the One Health concept\n in research and teaching?",
+                           "G01Q03" = "3. In the last five years,\n have you been involved in any One Health network",
+                           "G01Q03a[SQ001]" = "Please, specify the network",
+                           "G01Q03a[SQ002]" = "Please, specify the further networks",
+                           "G01Q04[SQ001]" = "4. Are you currently working on [Antimicrobial resistance]",
+                           "G01Q04[SQ002]" = "4. Are you currently working on [Emerging threats]",
+                           "G01Q04[SQ003]" = "4. Are you currently working on [Zoonotic diseases / diseases of zoonotic origin]",
+                           "G01Q04[SQ004]" = "4. Are you currently working on [Vector-borne diseases]",
+                           "G01Q04[SQ005]" = "4. Are you currently working on [Environmental contaminants or pollution]",
+                           "G01Q04[SQ006]" = "4. Are you currently working on [Food safety]",
+                           "G01Q04[SQ007]" = "4. Are you currently working on [Comparative medicine]",
+                           "G01Q04[SQ008]" = "4. Are you currently working on [Conservation medicine]",
+                           "G01Q04[other]" = "4. Are you currently working on [Other]",
+                           "G01Q05" = "5. Have you previously considered\n a One Health approach in your activities/projects?",
+                           "G01Q05a[SQ001]" = "Please list your OneHealth activities/projects",
+                           "G01Q05a[SQ002]" = "Please list your OneHealth activities/projects",
+                           "G01Q05a[SQ003]" = "Please list your OneHealth activities/projects",
+                           "G01Q05a[SQ004]" = "Please list your OneHealth activities/projects",
+                           "G01Q05a[SQ005]" = "Please list your OneHealth activities/projects",
+                           "G01Q05a[SQ006]" = "Please list your OneHealth activities/projects",
+                           "G01Q05x1[SQ001]" = "5.1. What has hindered you [I am not sufficiently familiar with the concept.]",
+                           "G01Q05x1[SQ002]" = "5.1. What has hindered you [My research/activity\n does not integrate One Health issue(s).]",
+                           "G01Q05x1[SQ003]" = "5.1. What has hindered you [I do not have the\n resources for implementing One Health.]",
+                           "G01Q05x1[SQ004]" = "5.1. What has hindered you [I do not have\n sufficient connections with the human health sector.]",
+                           "G01Q05x1[SQ005]" = "5.1. What has hindered you [I do not have\n sufficient connections with the environmental health sector.]",
+                           "G01Q05x1[SQ006]" = "5.1. What has hindered you [It is out of the scope\n of my responsibility.]",
+                           "G01Q05x1[other]" = "5.1. What has hindered you [Other]",
+                           "G01Q06[SQ001]" = "6. Collaborations (last 5 years) [Animal health ]",
+                           "G01Q06[SQ002]" = "6. Collaborations (last 5 years) [Human health ]",
+                           "G01Q06[SQ003]" = "6. Collaborations (last 5 years) [Plant health]",
+                           "G01Q06[SQ004]" = "6. Collaborations (last 5 years) [Soil health ]",
+                           "G01Q06[SQ005]" = "6. Collaborations (last 5 years) [Water health/safety ]",
+                           "G01Q06[SQ006]" = "6. Collaborations (last 5 years) [Conservation / Biodiversity ]",
+                           "G01Q06[SQ007]" = "6. Collaborations (last 5 years) [Social science ]",
+                           "G01Q06[SQ008]" = "6. Collaborations (last 5 years) [Climatology ]",
+                           "G01Q06[SQ009]" = "6. Collaborations (last 5 years) [Civil protection ]",
+                           "G01Q06[SQ010]" = "6. Collaborations (last 5 years) [Economic science]",
+                           "G01Q06[SQ011]" = "6. Collaborations (last 5 years) [Data science/complex systems ]",
+                           "G01Q06[SQ012]" = "6. Collaborations (last 5 years) [Public health ]",
+                           "G01Q06[SQ013]" = "6. Collaborations (last 5 years) [Policy and legislation]",
+                           "G01Q06[SQ014]" = "6. Collaborations (last 5 years) [Political sciences]",
+                           "G01Q06[other]" = "6. Collaborations (last 5 years) [Other]",
+                           "G01Q07[SQ001]" = "7. Limitation [Unwillingness of other sector(s) to collaborate.]",
+                           "G01Q07[SQ002]" = "7. Limitation  [Differences in\n discipline's terminology and concepts.]",
+                           "G01Q07[SQ003]" = "7. Limitation  [Integrating\n different disciplinary methods and concepts.]",
+                           "G01Q07[SQ004]" = "7. Limitation  [Incorporating\n stakeholder inputs in research design and implementation.]",
+                           "G01Q07[SQ005]" = "7. Limitation  [Institutional barriers.]",
+                           "G01Q07[SQ006]" = "7. Limitation  [Lack of training/education\n in transdisciplinary research.]",
+                           "G01Q07[SQ007]" = "7. Limitation  [Integrating data\n of many types from many different sources (i.e. lack of harmonization/standardization).]",
+                           "G01Q07[SQ008]" = "7. Limitation  [Lack of guidelines\n and structures for data sharing.]",
+                           "G01Q07[SQ009]" = "7. Limitation  [Lack of intuitional culture\n for sharing data.]",
+                           "G01Q07[SQ010]" = "7. Limitation  [Data protection issues\n (e.g. data originating from different stakeholders, medical data…).]",
+                           "G01Q07[SQ011]" = "7. Limitation  [Lack of funding\n for transdisciplinary projects.]",
+                           "G01Q08[SQ001]" = "8. Relevance One Health potential benefit\n [Early detection of threats and timely, effective or rapid response.]",
+                           "G01Q08[SQ002]" = "8. Relevance One Health potential benefit\n  [Better/improved/more effective disease control and/or biosecurity measures.]",
+                           "G01Q08[SQ003]" = "8. Relevance One Health potential benefit\n  [Improved preparedness\n to (human and animal) infectious disease outbreaks/epidemics/pandemics.]",
+                           "G01Q08[SQ004]" = "8. Relevance One Health potential benefit\n  [Understanding the role of animals as sentinels for environmental contamination.]",
+                           "G01Q08[SQ005]" = "8. Relevance One Health potential benefit\n  [Studies on animals may improve our understanding of the relationship\n between genes and environmental exposure in chronic diseases (e.g. cancers).]",
+                           "G01Q08[SQ006]" = "8. Relevance One Health potential benefit\n  [Some clinical practices in veterinary medicine could translate to human medicine.]",
+                           "G01Q08[SQ007]" = "8. Relevance One Health potential benefit\n  [Comparative medicine: medicine and veterinary medicine\n can generate new scientific insights across species.]",
+                           "G01Q08[SQ008]" = "8. Relevance One Health potential benefit\n  [Understanding antimicrobial resistance epidemiology and ecology.]",
+                           "G01Q08[SQ009]" = "8. Relevance One Health potential benefit\n  [Ensuring sustainable production and supply of animal derived protein and food security.]",
+                           "G01Q08[SQ010]" = "8. Relevance One Health potential benefit\n  [Economic benefit/increase in economic efficiency.]",
+                           "G01Q08[SQ011]" = "8. Relevance One Health potential benefit\n  [Improvement in human or animal health and well-being.]",
+                           "G01Q08[SQ012]" = "8. Relevance One Health potential benefit\n  [Higher quality or larger quantity of information and data.]",
+                           "G01Q08[SQ013]" = "8. Relevance One Health potential benefit\n  [Achieving the United Nations Sustainable Development Goals (SDGs).]",
+                           "G01Q08[SQ014]" = "8. Relevance One Health potential benefit\n  [Personal or social benefits.]",
+                           "G01Q08[SQ015]" = "8. Relevance One Health potential benefit\n  [Design of health policies.]",
+                           "G01Q09[SQ001]" = "9. How likely would you join an intra-Vetmeduni\n and, in the future, an inter-university One Health Network?",
+                           "G01Q10[SQ001]" = "10. Main benefits of this One Health Network\n  [Expanded professional network.]",
+                           "G01Q10[SQ002]" = "10. Main benefits of this One Health Network\n  [Collaboration opportunities on campus.]",
+                           "G01Q10[SQ003]" = "10. Main benefits of this One Health Network\n  [Collaboration opportunities out of campus.]",
+                           "G01Q10[SQ004]" = "10. Main benefits of this One Health Network\n  [New opportunities for funding.]",
+                           "G01Q10[SQ005]" = "10. Main benefits of this One Health Network\n  [New opportunities for publications.]",
+                           "G01Q10[SQ006]" = "10. Main benefits of this One Health Network\n  [Possibility of publication in high impact factor journal.]",
+                           "G01Q10[SQ007]" = "10. Main benefits of this One Health Network\n  [I do not see any benefit from an intra-(Vetmeduni) or inter-university One Health Network]",
+                           "G01Q10[other]" = "10. Main benefits of this One Health Network\n  [Other]",
+                           "G01Q11[SQ001]" = "11. How open would you be to support\n your team members in One Health activities/networking/training?",
+                           "G01Q12[SQ001]" = "12. How important is training veterinarians on One Health approaches?",
+                           "G01Q13[SQ001]" = "13. How important is preparing veterianrians for transdisciplinary work?"
+                           )
+
+# Now print the summary table 
+res_num
+```
+
+
+## Open-ended questions
+
+### In which networks were the participants involved in the last five years?
+
+```{r OH_networks, results='asis'}
+tab_net
+```
+
+
+### Other OH topics participants are working on:
+
+```{r OH_otherOH, results='asis'}
+tab_otherOH
+```
+
+### Activities and projects in which OH was considered:
+
+```{r OH_OHact, results='asis'}
+tab_OHact
+```
+
+### What has hindered you from using a OH approach?
+
+```{r OH_hindered, results='asis'}
+tab_hindered
+```
+
+### With which other disciplines/sectors/professions have you been collaborating in the last 5 years?
+
+```{r OH_collab, results='asis'}
+tab_collab
+```
+
+### What would be other main benefits of this One Health Network for you?
+
+```{r OH_benefits, results='asis'}
+tab_benefits
+```
+
+### Comments
+
+```{r OH_comm, results='asis'}
+tab_comm
+```
